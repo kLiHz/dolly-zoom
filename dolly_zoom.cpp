@@ -26,8 +26,9 @@ int main(int argc, char* argv[]) {
 
     std::string windowName = "Video";
     cv::namedWindow(windowName, cv::WINDOW_NORMAL);
-    cv::namedWindow("Result", cv::WINDOW_NORMAL);
-
+#ifdef VISUALIZE_PROCESS
+    cv::namedWindow("Output", cv::WINDOW_NORMAL);
+#endif
     cv::Rect2f userChoice = cv::selectROI(windowName, frame);
     auto roi = userChoice;
     std::cout << "Selected ROI: " << roi << "\n";
@@ -41,6 +42,14 @@ int main(int argc, char* argv[]) {
 
     tracker.init(frame, roi, parameters);
 
+    cv::Size2i outSize(1280,720);
+
+    auto pos = path.find_last_of('.');
+    auto fileExtension = path.substr(pos); // .xxx
+    std::string outFileName = path.substr(0, pos) + "-out" + fileExtension;
+
+    cv::VideoWriter out(outFileName, cv::VideoWriter::fourcc('H','2','6','4'), 30, outSize);
+
     while (video.isOpened()) {
         video >> frame;
         if (frame.empty()) { break; }
@@ -51,12 +60,19 @@ int main(int argc, char* argv[]) {
         std::cout << "ratio: " << ratio << std::endl;
         auto currentFrameTopLeft = roi.tl() - (shift * ratio);
         cv::Rect2f currentFrame(currentFrameTopLeft, croppedFrame.size() * ratio);
-        cv::imshow("Result", frame(currentFrame));
-        cv::waitKey(20);
-
+#ifdef VISUALIZE_PROCESS
         cv::rectangle(frame, roi, cv::Scalar(0,255,0), 5);
         cv::rectangle(frame, currentFrame, cv::Scalar(255,0,0), 5);
         cv::imshow(windowName, frame);
-        cv::waitKey(30);
+
+        cv::imshow("Output", frame(currentFrame));
+        if (cv::waitKey(30) == 27) break;
+#endif
+        cv::Mat t;
+        cv::resize(frame(currentFrame), t, outSize);
+        out << t;
     }
+    video.release();
+    out.release();
+    return 0;
 }
