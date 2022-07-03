@@ -1,0 +1,3 @@
+[submodule "EcoTracker"]
+	path = EcoTracker
+	url = https://github.com/kLiHz/EcoTracker.git
